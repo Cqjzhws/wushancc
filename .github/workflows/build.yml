@@ -28,6 +28,7 @@ jobs:
           THEOS: ${{ github.workspace }}/theos
         run: |
           git clone --depth=1 https://github.com/theos/theos.git "$THEOS"
+          git clone --depth=1 https://github.com/theos/packaging.git "$THEOS/vendor/packaging"
           echo "THEOS=$THEOS" >> $GITHUB_ENV
           curl -fsSL https://github.com/theos/sdks/archive/refs/heads/master.tar.gz | tar xz -C "$THEOS"
           mv "$THEOS"/sdks-master/* "$THEOS"/sdks/ 2>/dev/null || true
