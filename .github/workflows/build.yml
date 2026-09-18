@@ -1,0 +1,86 @@
+name: Build AnimationSpeed v3 + Tweak dylib
+
+on:
+  workflow_dispatch:        # 手动触发
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Build TIPA + dylib
+    runs-on: macos-15        # Xcode 16，支持 folder-sync 工程
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 16
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      # ---------- theos ----------
+      - name: Install theos
+        env:
+          THEOS: ${{ github.workspace }}/theos
+        run: |
+          git clone --depth=1 https://github.com/theos/theos.git "$THEOS"
+          echo "THEOS=$THEOS" >> $GITHUB_ENV
+          curl -fsSL https://github.com/theos/sdks/archive/refs/heads/master.tar.gz | tar xz -C "$THEOS"
+          mv "$THEOS"/sdks-master/* "$THEOS"/sdks/ 2>/dev/null || true
+          ls "$THEOS/sdks" | head -5
+
+      - name: Setup fakeroot
+        run: |
+          brew update
+          brew install fakeroot
+
+      - name: Setup ldid
+        run: |
+          git clone --depth=1 https://github.com/ProcursusTeam/ldid.git
+          cd ldid
+          make
+          sudo cp ldid /usr/local/bin/
+          cd ..
+          ldid -h 2>&1 | head -3
+
+      # ---------- Build APP (TIPA) ----------
+      - name: Build App (TIPA)
+        env:
+          THEOS: ${{ github.workspace }}/theos
+        run: |
+          cd ${{ github.workspace }}
+          make package FINALPACKAGE=1
+          ls -la packages/
+
+      # ---------- Build dylib ----------
+      - name: Build companion dylib
+        env:
+          THEOS: ${{ github.workspace }}/theos
+        run: |
+          cd ${{ github.workspace }}/Tweak
+          make package FINALPACKAGE=1
+          mkdir -p ${{ github.workspace }}/packages/dylib
+          cp -f "${{ github.workspace }}"/Tweak/.theos/obj/AnimationSpeedTweak.dylib "${{ github.workspace }}/packages/dylib/" 2>/dev/null || \
+          cp -f "${{ github.workspace }}"/Tweak/.theos/obj/*.dylib "${{ github.workspace }}/packages/dylib/" || true
+          ls -la "${{ github.workspace }}/packages/dylib/"
+
+      # ---------- Pack artifacts ----------
+      - name: Verify outputs
+        run: |
+          cd ${{ github.workspace }}
+          echo "===== Final artifacts ====="
+          find packages -type f -maxdepth 3
+          file "${{ github.workspace }}/packages/dylib/"*.dylib 2>/dev/null || echo "(no dylib)"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: AnimationSpeed-v3-build
+          path: |
+            packages/*.tipa
+            packages/dylib/*.dylib
+          if-no-files-found: warn
