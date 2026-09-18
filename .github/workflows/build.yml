@@ -57,27 +57,42 @@ jobs:
       - name: Build App (TIPA)
         env:
           THEOS: ${{ github.workspace }}/theos
+          THEOS_STAGING_DIR: ${{ github.workspace }}/theos/sdks/iPhoneOS16.4.sdk/RootFS
         run: |
           cd ${{ github.workspace }}
+          # Compile only (no fakeroot)
           make
-          make install
-          THEOS_STAGING="$THEOS/sdks/iPhoneOS16.4.sdk/RootFS"
-          cp RebootRootHelper "$THEOS_STAGING/Applications/AnimationSpeed.app/"
+          # Manually stage without fakeroot
+          mkdir -p "$THEOS_STAGING_DIR/Applications/AnimationSpeed.app"
+          cp -r ".theos/obj/AnimationSpeed.app/"* "$THEOS_STAGING_DIR/Applications/AnimationSpeed.app/"
+          # Sign with ldid (no entitlements file needed, just inject)
+          ldid -S "$THEOS_STAGING_DIR/Applications/AnimationSpeed.app/AnimationSpeed"
+          # Embed companion helper
+          cp RebootRootHelper "$THEOS_STAGING_DIR/Applications/AnimationSpeed.app/"
+          # Package as .tipa (ios .deb format)
           mkdir -p packages
-          dpkg-deb -Zgzip -b "$THEOS_STAGING" packages/com.developlab.animationspeed_3.0.0_iphoneos-arm.deb
+          dpkg-deb -Zgzip -b "$THEOS_STAGING_DIR" packages/com.developlab.animationspeed_3.0.0_iphoneos-arm.deb
           mv packages/com.developlab.animationspeed_3.0.0_iphoneos-arm.deb packages/AnimationSpeed_3.0.0.tipa
+          echo "Build App done"
           ls -la packages/
 
       # ---------- Build dylib ----------
       - name: Build companion dylib
         env:
           THEOS: ${{ github.workspace }}/theos
+          THEOS_STAGING_DIR: ${{ github.workspace }}/theos/sdks/iPhoneOS16.4.sdk/RootFS
         run: |
           cd ${{ github.workspace }}/Tweak
           make
+          make stage
+          mkdir -p "$THEOS_STAGING_DIR/Library/MobileSubstrate/DynamicLibraries"
+          cp -f ".theos/obj/AnimationSpeedTweak.dylib" "$THEOS_STAGING_DIR/Library/MobileSubstrate/DynamicLibraries/"
+          cp -f layout/Library/MobileSubstrate/DynamicLibraries/AnimationSpeedTweak.plist "$THEOS_STAGING_DIR/Library/MobileSubstrate/DynamicLibraries/"
           mkdir -p ${{ github.workspace }}/packages/dylib
-          cp -f "${{ github.workspace }}"/Tweak/.theos/obj/AnimationSpeedTweak.dylib "${{ github.workspace }}/packages/dylib/" 2>/dev/null || \
-          cp -f "${{ github.workspace }}"/Tweak/.theos/obj/*.dylib "${{ github.workspace }}/packages/dylib/" || true
+          cp -f ".theos/obj/AnimationSpeedTweak.dylib" "${{ github.workspace }}/packages/dylib/"
+          # Package tweak as deb
+          mkdir -p ${{ github.workspace }}/packages/tweak_deb
+          dpkg-deb -Zgzip -b "$THEOS_STAGING_DIR" ${{ github.workspace }}/packages/tweak_deb/com.developlab.animationspeed.tweak_3.0.0_iphoneos-arm.deb
           ls -la "${{ github.workspace }}/packages/dylib/"
 
       # ---------- Pack artifacts ----------
