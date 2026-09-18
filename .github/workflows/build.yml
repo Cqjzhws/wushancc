@@ -36,7 +36,7 @@ jobs:
       - name: Setup fakeroot
         run: |
           brew update
-          brew install fakeroot
+          brew install fakeroot || brew install fakeroot-tcp || true
 
       - name: Setup ldid
         run: |
@@ -59,7 +59,7 @@ jobs:
           THEOS: ${{ github.workspace }}/theos
         run: |
           cd ${{ github.workspace }}
-          make package FINALPACKAGE=1
+          make package FINALPACKAGE=1 THEOS_NO_FAKEROOT=1
           ls -la packages/
 
       # ---------- Build dylib ----------
@@ -68,7 +68,7 @@ jobs:
           THEOS: ${{ github.workspace }}/theos
         run: |
           cd ${{ github.workspace }}/Tweak
-          make package FINALPACKAGE=1
+          make package FINALPACKAGE=1 THEOS_NO_FAKEROOT=1
           mkdir -p ${{ github.workspace }}/packages/dylib
           cp -f "${{ github.workspace }}"/Tweak/.theos/obj/AnimationSpeedTweak.dylib "${{ github.workspace }}/packages/dylib/" 2>/dev/null || \
           cp -f "${{ github.workspace }}"/Tweak/.theos/obj/*.dylib "${{ github.workspace }}/packages/dylib/" || true
