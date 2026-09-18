@@ -60,13 +60,12 @@ jobs:
         run: |
           cd ${{ github.workspace }}
           make
+          make install
+          THEOS_STAGING="$THEOS/sdks/iPhoneOS16.4.sdk/RootFS"
+          cp RebootRootHelper "$THEOS_STAGING/Applications/AnimationSpeed.app/"
           mkdir -p packages
-          mkdir -p "$(THEOS_STAGING_DIR)/Applications/AnimationSpeed.app"
-          cp -r .theos/obj/AnimationSpeed.app/* "$(THEOS_STAGING_DIR)/Applications/AnimationSpeed.app/"
-          ldid -Sentitlements.plist "$(THEOS_STAGING_DIR)/Applications/AnimationSpeed.app/AnimationSpeed"
-          rm -f "$(THEOS_STAGING_DIR)/Applications/AnimationSpeed.app/_CodeSignature" 2>/dev/null || true
-          cp RebootRootHelper "$(THEOS_STAGING_DIR)/Applications/AnimationSpeed.app/"
-          echo "Staging dir prepared"
+          dpkg-deb -Zgzip -b "$THEOS_STAGING" packages/com.developlab.animationspeed_3.0.0_iphoneos-arm.deb
+          mv packages/com.developlab.animationspeed_3.0.0_iphoneos-arm.deb packages/AnimationSpeed_3.0.0.tipa
           ls -la packages/
 
       # ---------- Build dylib ----------
