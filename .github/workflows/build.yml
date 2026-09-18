@@ -41,11 +41,9 @@ jobs:
       - name: Setup ldid
         run: |
           brew install libplist libxml2
-          git clone --depth=1 https://github.com/ProcursusTeam/ldid.git
-          cd ldid
-          make
           mkdir -p $HOME/bin
-          cp ldid $HOME/bin/
+          curl -fsSL "https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/ldid_macosx_arm64" -o "$HOME/bin/ldid"
+          chmod +x "$HOME/bin/ldid"
           echo "$HOME/bin" >> $GITHUB_PATH
           ldid -h 2>&1 | head -3
 
