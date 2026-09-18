@@ -59,7 +59,14 @@ jobs:
           THEOS: ${{ github.workspace }}/theos
         run: |
           cd ${{ github.workspace }}
-          make package FINALPACKAGE=1 THEOS_NO_FAKEROOT=1
+          make
+          mkdir -p packages
+          mkdir -p "$(THEOS_STAGING_DIR)/Applications/AnimationSpeed.app"
+          cp -r .theos/obj/AnimationSpeed.app/* "$(THEOS_STAGING_DIR)/Applications/AnimationSpeed.app/"
+          ldid -Sentitlements.plist "$(THEOS_STAGING_DIR)/Applications/AnimationSpeed.app/AnimationSpeed"
+          rm -f "$(THEOS_STAGING_DIR)/Applications/AnimationSpeed.app/_CodeSignature" 2>/dev/null || true
+          cp RebootRootHelper "$(THEOS_STAGING_DIR)/Applications/AnimationSpeed.app/"
+          echo "Staging dir prepared"
           ls -la packages/
 
       # ---------- Build dylib ----------
@@ -68,7 +75,7 @@ jobs:
           THEOS: ${{ github.workspace }}/theos
         run: |
           cd ${{ github.workspace }}/Tweak
-          make package FINALPACKAGE=1 THEOS_NO_FAKEROOT=1
+          make
           mkdir -p ${{ github.workspace }}/packages/dylib
           cp -f "${{ github.workspace }}"/Tweak/.theos/obj/AnimationSpeedTweak.dylib "${{ github.workspace }}/packages/dylib/" 2>/dev/null || \
           cp -f "${{ github.workspace }}"/Tweak/.theos/obj/*.dylib "${{ github.workspace }}/packages/dylib/" || true
