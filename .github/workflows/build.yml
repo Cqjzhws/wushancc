@@ -40,7 +40,7 @@ jobs:
 
       - name: Setup ldid
         run: |
-          brew install libplist
+          brew install libplist libxml2
           git clone --depth=1 https://github.com/ProcursusTeam/ldid.git
           cd ldid
           make
