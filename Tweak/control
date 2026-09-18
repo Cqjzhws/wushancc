@@ -1,0 +1,8 @@
+Package: com.developlab.animationspeed.tweak
+Name: AnimationSpeedTweak
+Version: 3.0.0
+Architecture: iphoneos-arm
+Description: Companion dylib for AnimationSpeed — hooks UIView/CATransaction/UIViewPropertyAnimator/UIScrollView/UIViewController animations
+Maintainer: developlab
+Section: Utilities
+Depends: firmware (>= 14.0), mobilesubstrate
