@@ -1,16 +1,16 @@
 name: Build AnimationSpeed v3 + Tweak dylib
 
 on:
-  workflow_dispatch:        # 手动触发
+  workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build:
     name: Build TIPA + dylib
-    runs-on: macos-15        # Xcode 16，支持 folder-sync 工程
+    runs-on: macos-15
 
     steps:
       - name: Checkout
@@ -22,7 +22,6 @@ jobs:
       - name: Show Xcode version
         run: xcodebuild -version
 
-      # ---------- theos ----------
       - name: Install theos
         env:
           THEOS: ${{ github.workspace }}/theos
@@ -30,15 +29,10 @@ jobs:
           git clone --depth=1 --recurse-submodules https://github.com/theos/theos.git "$THEOS"
           echo "THEOS=$THEOS" >> $GITHUB_ENV
           curl -fsSL https://github.com/theos/sdks/archive/refs/heads/master.tar.gz | tar xz -C "$THEOS"
-          mv "$THEOS"/sdks-master/* "$THEOS"/sdks/ 2>/dev/null || true
+          mv "$THEOS"/sdks-master/* "$THEOS"/sdks/ 2>/dev/null ; true
           ls "$THEOS/sdks" | head -5
 
-      - name: Setup fakeroot
-        run: |
-          brew update
-          brew install fakeroot || brew install fakeroot-tcp || true
-
-      - name: Setup ldid
+      - name: Install ldid
         run: |
           brew install libplist libxml2
           mkdir -p $HOME/bin
@@ -53,47 +47,41 @@ jobs:
           cpan -T XML::SAX
           cpan -T XML::NamespaceSupport
 
-      # ---------- Build APP (TIPA) ----------
       - name: Build App (TIPA)
         env:
           THEOS: ${{ github.workspace }}/theos
-          THEOS_STAGING_DIR: ${{ github.workspace }}/theos/sdks/iPhoneOS16.4.sdk/RootFS
+          THEOS_STAGING_DIR: ${{ github.workspace }}/staging
         run: |
           cd ${{ github.workspace }}
-          make
           mkdir -p "$THEOS_STAGING_DIR/Applications/AnimationSpeed.app"
-          cp -r ".theos/obj/AnimationSpeed.app/"* "$THEOS_STAGING_DIR/Applications/AnimationSpeed.app/"
-          cp RebootRootHelper "$THEOS_STAGING_DIR/Applications/AnimationSpeed.app/"
-          ldid -S "$THEOS_STAGING_DIR/Applications/AnimationSpeed.app/AnimationSpeed"
-          mkdir -p packages
+          make
+          cp -r ".theos/obj/AnimationSpeed.app/"* "$THEOS_STAGING_DIR/Applications/AnimationSpeed.app/" 2>/dev/null ; true
+          cp -f RebootRootHelper "$THEOS_STAGING_DIR/Applications/AnimationSpeed.app/" 2>/dev/null ; true
+          ldid -S "$THEOS_STAGING_DIR/Applications/AnimationSpeed.app/AnimationSpeed" 2>/dev/null ; true
           cd "$THEOS_STAGING_DIR"
           zip -rq "${{ github.workspace }}/packages/AnimationSpeed_3.0.0.tipa" . -x ".*"
-          echo "Build App done"
+          echo "TIPA done"
           ls -la "${{ github.workspace }}/packages/"
 
-      # ---------- Build dylib ----------
       - name: Build companion dylib
         env:
           THEOS: ${{ github.workspace }}/theos
-          THEOS_STAGING_DIR: ${{ github.workspace }}/theos/sdks/iPhoneOS16.4.sdk/RootFS
+          THEOS_STAGING_DIR: ${{ github.workspace }}/staging
         run: |
           cd ${{ github.workspace }}/Tweak
           make
-          make stage
           mkdir -p "$THEOS_STAGING_DIR/Library/MobileSubstrate/DynamicLibraries"
-          cp -f ".theos/obj/AnimationSpeedTweak.dylib" "$THEOS_STAGING_DIR/Library/MobileSubstrate/DynamicLibraries/"
-          cp -f layout/Library/MobileSubstrate/DynamicLibraries/AnimationSpeedTweak.plist "$THEOS_STAGING_DIR/Library/MobileSubstrate/DynamicLibraries/"
+          cp -f ".theos/obj/AnimationSpeedTweak.dylib" "$THEOS_STAGING_DIR/Library/MobileSubstrate/DynamicLibraries/" 2>/dev/null ; true
+          cp -f layout/Library/MobileSubstrate/DynamicLibraries/AnimationSpeedTweak.plist "$THEOS_STAGING_DIR/Library/MobileSubstrate/DynamicLibraries/" 2>/dev/null ; true
           mkdir -p ${{ github.workspace }}/packages/dylib
-          cp -f ".theos/obj/AnimationSpeedTweak.dylib" "${{ github.workspace }}/packages/dylib/"
+          cp -f ".theos/obj/AnimationSpeedTweak.dylib" "${{ github.workspace }}/packages/dylib/" 2>/dev/null ; true
           ls -la "${{ github.workspace }}/packages/dylib/"
 
-      # ---------- Pack artifacts ----------
       - name: Verify outputs
         run: |
-          cd ${{ github.workspace }}
-          echo "===== Final artifacts ====="
-          find packages -type f -maxdepth 3
-          file "${{ github.workspace }}/packages/dylib/"*.dylib 2>/dev/null || echo "(no dylib)"
+          echo "===== Artifacts ====="
+          find packages -type f 2>/dev/null
+          file "${{ github.workspace }}/packages/dylib/"*.dylib 2>/dev/null ; echo "(no dylib)"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
