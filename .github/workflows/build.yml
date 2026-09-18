@@ -40,11 +40,13 @@ jobs:
 
       - name: Setup ldid
         run: |
+          brew install libplist
           git clone --depth=1 https://github.com/ProcursusTeam/ldid.git
           cd ldid
           make
-          sudo cp ldid /usr/local/bin/
-          cd ..
+          mkdir -p $HOME/bin
+          cp ldid $HOME/bin/
+          echo "$HOME/bin" >> $GITHUB_PATH
           ldid -h 2>&1 | head -3
 
       # ---------- Build APP (TIPA) ----------
