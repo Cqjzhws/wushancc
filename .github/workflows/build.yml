@@ -60,21 +60,19 @@ jobs:
           THEOS_STAGING_DIR: ${{ github.workspace }}/theos/sdks/iPhoneOS16.4.sdk/RootFS
         run: |
           cd ${{ github.workspace }}
-          # Compile only (no fakeroot)
+          # Compile and install to staging (no fakeroot, no package)
           make
-          # Manually stage without fakeroot
-          mkdir -p "$THEOS_STAGING_DIR/Applications/AnimationSpeed.app"
-          cp -r ".theos/obj/AnimationSpeed.app/"* "$THEOS_STAGING_DIR/Applications/AnimationSpeed.app/"
-          # Sign with ldid (no entitlements file needed, just inject)
-          ldid -S "$THEOS_STAGING_DIR/Applications/AnimationSpeed.app/AnimationSpeed"
-          # Embed companion helper
+          make install
+          # Copy helper binary
           cp RebootRootHelper "$THEOS_STAGING_DIR/Applications/AnimationSpeed.app/"
-          # Package as .tipa (ios .deb format)
+          # Sign main binary
+          ldid -S "$THEOS_STAGING_DIR/Applications/AnimationSpeed.app/AnimationSpeed"
+          # TIPA = zip of the iOS filesystem root, renamed
           mkdir -p packages
-          dpkg-deb -Zgzip -b "$THEOS_STAGING_DIR" packages/com.developlab.animationspeed_3.0.0_iphoneos-arm.deb
-          mv packages/com.developlab.animationspeed_3.0.0_iphoneos-arm.deb packages/AnimationSpeed_3.0.0.tipa
+          cd "$THEOS_STAGING_DIR"
+          zip -rq "${{ github.workspace }}/packages/AnimationSpeed_3.0.0.tipa" . -x ".*"
           echo "Build App done"
-          ls -la packages/
+          ls -la "${{ github.workspace }}/packages/"
 
       # ---------- Build dylib ----------
       - name: Build companion dylib
