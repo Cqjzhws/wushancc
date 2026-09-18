@@ -49,6 +49,12 @@ jobs:
           echo "$HOME/bin" >> $GITHUB_PATH
           ldid -h 2>&1 | head -3
 
+      - name: Install Perl XML modules for theos
+        run: |
+          cpan -T XML::LibXML
+          cpan -T XML::SAX
+          cpan -T XML::NamespaceSupport
+
       # ---------- Build APP (TIPA) ----------
       - name: Build App (TIPA)
         env:
